@@ -1,0 +1,12 @@
+{
+  "signaling_url": "ws://localhost:8080",
+  "log_level": "info",
+  "capture": {
+    "framerate": 60,
+    "resolution": "1920x1080"
+  },
+  "encode": {
+    "bitrate": 8000000,
+    "hardware": true
+  }
+}

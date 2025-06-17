@@ -1,0 +1,25 @@
+# C++
+build/
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+*.vcxproj*
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# Node/Electron
+node_modules/
+dist/
+*.log
+npm-debug.log
+
+# macOS
+.DS_Store
+
+# VSCode
+.vscode/
