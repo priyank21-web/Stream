@@ -22,3 +22,6 @@ public:
     virtual bool Start(FrameCallback callback) = 0;
     virtual void Stop() = 0;
 };
+
+// Factory function for platform capture
+std::unique_ptr<Capture> createPlatformCapture();

@@ -2,19 +2,15 @@
 
 #include <memory>
 #include <string>
+#include <functional>
+
+#ifdef USE_WEBRTC
 #include <thread>
 #include <mutex>
 #include <queue>
-#include <functional>
-
 #include "Capture.h"
 #include "Encoder.h"
 #include "SignalingClient.h"
-
-#include <memory>
-#include <thread>
-#include <atomic>
-
 #include "api/peer_connection_interface.h"
 #include "api/create_peerconnection_factory.h"
 #include "api/media_stream_interface.h"
@@ -22,6 +18,7 @@
 #include "api/audio_options.h"
 #include "rtc_base/thread.h"
 #include "rtc_base/logging.h"
+#include "FrameVideoSource.h"
 
 class WebRTCSession : public webrtc::PeerConnectionObserver,
                       public webrtc::CreateSessionDescriptionObserver {
@@ -46,7 +43,7 @@ public:
     void SetOnIceCandidate(OnIceCandidate callback);
 
     // Connect Capture + Encoder Output
-    void AddVideoSource(rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> source);
+    void AddVideoSource(rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> source) override;
     void AddAudioSource(rtc::scoped_refptr<webrtc::AudioSourceInterface> source);
 
 private:
@@ -90,4 +87,19 @@ private:
     void OnEncodedFrame(const EncodedFrame& frame);
 
 };
+#else
+// Minimal stub for non-WebRTC builds
+class WebRTCSession {
+public:
+    WebRTCSession() {}
+    ~WebRTCSession() {}
+    bool Init() { return false; }
+    void Close() {}
+    bool Start(const std::string&, const std::string&) { return false; }
+    void Stop() {}
+};
+#endif
+
+// Factory function for both builds
+std::unique_ptr<WebRTCSession> createWebRTCSession();
 

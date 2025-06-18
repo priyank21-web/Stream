@@ -2,7 +2,7 @@
 #include "../include/Encoder.h"
 #include "../include/WebRTCSession.h"
 #include "../include/InputInjector.h"
-#include "src/webrtc/SignalingClient.h"
+#include "../include/SignalingClient.h"
 #include "../include/Logger.h"
 #include <fstream>
 #include <nlohmann/json.hpp>
@@ -25,9 +25,9 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    auto capture = stream::createPlatformCapture();
-    auto encoder = stream::createPlatformEncoder();
-    auto webrtc = stream::createWebRTCSession();
+    auto capture = createPlatformCapture();
+    auto encoder = createPlatformEncoder();
+    auto webrtc = createWebRTCSession();
     auto input = stream::createPlatformInputInjector();
     auto signaling = stream::createWebSocketSignalingClient();
     signaling->connect("ws://localhost:8080");

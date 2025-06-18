@@ -75,8 +75,9 @@ private:
             std::this_thread::sleep_for(std::chrono::milliseconds(16)); // ~60 FPS
         }
 
+        // Cleanup
         XShmDetach(display, &shminfo);
-        XDestroyImage(image);
+        image->f.destroy_image(image);
         shmdt(shminfo.shmaddr);
         shmctl(shminfo.shmid, IPC_RMID, 0);
         XCloseDisplay(display);

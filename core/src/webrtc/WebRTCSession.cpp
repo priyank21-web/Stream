@@ -1,10 +1,11 @@
-#include "webrtc/WebRTCSession.h"
 #include <iostream>
-#include "WebRTCSession.h"
+#include "../include/WebRTCSession.h"
 #include "Capture.h"
 #include "Encoder.h"
 #include "Logger.h"
 #include "SignalingClient.h"
+#include "FrameVideoSource.h"
+#include "ColorConvert.h"
 #include <chrono>
 #include <thread>
 
@@ -12,12 +13,10 @@ extern "C" Capture* CreateCapture();
 extern "C" Encoder* CreateEncoder();
 
 WebRTCSession::WebRTCSession()
-    
     : signaling_thread_(rtc::Thread::Create().release()),
       worker_thread_(rtc::Thread::Create().release()),
-      network_thread_(rtc::Thread::Create().release()) {}
-
-    : running_(false) {}
+      network_thread_(rtc::Thread::Create().release()),
+      running_(false) {}
 
 WebRTCSession::~WebRTCSession() {
     Close();
@@ -158,13 +157,32 @@ bool WebRTCSession::Start(const std::string& signalingUrl, const std::string& st
     encoder_ = std::unique_ptr<Encoder>(CreateEncoder());
     signaling_ = std::make_unique<SignalingClient>(signalingUrl, streamId);
 
+    // Create and add custom video source
+    auto video_source = rtc::make_ref_counted<FrameVideoSource>();
+    AddVideoSource(video_source);
+
     if (!signaling_->Connect()) {
         Logger::Error("Failed to connect signaling");
         return false;
     }
 
     if (!encoder_->Start(1920, 1080, 30, 
-        [this](const EncodedFrame& frame) { this->OnEncodedFrame(frame); })) {
+        [this, video_source](const EncodedFrame& frame) {
+            // Convert BGRA to I420 and push to WebRTC
+            int width = 1920, height = 1080;
+            rtc::scoped_refptr<webrtc::I420Buffer> buffer =
+                webrtc::I420Buffer::Create(width, height);
+            ConvertBGRAtoI420(frame.data, width, height,
+                buffer->MutableDataY(), buffer->StrideY(),
+                buffer->MutableDataU(), buffer->StrideU(),
+                buffer->MutableDataV(), buffer->StrideV());
+            webrtc::VideoFrame videoFrame = webrtc::VideoFrame::Builder()
+                .set_video_frame_buffer(buffer)
+                .set_timestamp_us(frame.timestamp)
+                .set_rotation(webrtc::kVideoRotation_0)
+                .build();
+            video_source->PushFrame(videoFrame);
+        })) {
         Logger::Error("Failed to start encoder");
         return false;
     }
