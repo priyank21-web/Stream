@@ -1,12 +1,31 @@
-#include "../../include/InputInjector.h"
-#ifdef __APPLE__
-// TODO: Implement Quartz Event Services input injection
-namespace stream {
+#include "InputInjector.h"
+#import <ApplicationServices/ApplicationServices.h>
+
 class MacInputInjector : public InputInjector {
 public:
-    void injectMouse(int x, int y, int button, bool down) override { /* Quartz mouse */ }
-    void injectKeyboard(int key, bool down) override { /* Quartz keyboard */ }
+    void MoveMouse(int x, int y) override {
+        CGPoint point = CGPointMake(x, y);
+        CGWarpMouseCursorPosition(point);
+    }
+
+    void MouseClick(bool down, int button) override {
+        CGEventType type;
+        if (button == 1) type = down ? kCGEventLeftMouseDown : kCGEventLeftMouseUp;
+        if (button == 2) type = down ? kCGEventRightMouseDown : kCGEventRightMouseUp;
+
+        CGPoint loc = CGEventGetLocation(CGEventCreate(NULL));
+        CGEventRef event = CGEventCreateMouseEvent(NULL, type, loc, button - 1);
+        CGEventPost(kCGHIDEventTap, event);
+        CFRelease(event);
+    }
+
+    void KeyPress(bool down, int keycode) override {
+        CGEventRef event = CGEventCreateKeyboardEvent(NULL, keycode, down);
+        CGEventPost(kCGHIDEventTap, event);
+        CFRelease(event);
+    }
 };
-std::unique_ptr<InputInjector> createPlatformInputInjector() { return std::make_unique<MacInputInjector>(); }
+
+extern "C" InputInjector* CreateInputInjector() {
+    return new MacInputInjector();
 }
-#endif

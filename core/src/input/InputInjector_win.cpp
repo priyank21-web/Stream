@@ -1,12 +1,28 @@
-#include "../../include/InputInjector.h"
-#ifdef _WIN32
-// TODO: Implement WinAPI input injection
-namespace stream {
-class WinInputInjector : public InputInjector {
+#include "InputInjector.h"
+#include <Windows.h>
+
+class WindowsInputInjector : public InputInjector {
 public:
-    void injectMouse(int x, int y, int button, bool down) override { /* WinAPI mouse */ }
-    void injectKeyboard(int key, bool down) override { /* WinAPI keyboard */ }
+    void MoveMouse(int x, int y) override {
+        SetCursorPos(x, y);
+    }
+
+    void MouseClick(bool down, int button) override {
+        DWORD flags = 0;
+        if (button == 1) flags = down ? MOUSEEVENTF_LEFTDOWN : MOUSEEVENTF_LEFTUP;
+        if (button == 2) flags = down ? MOUSEEVENTF_RIGHTDOWN : MOUSEEVENTF_RIGHTUP;
+        mouse_event(flags, 0, 0, 0, 0);
+    }
+
+    void KeyPress(bool down, int keycode) override {
+        INPUT input = { 0 };
+        input.type = INPUT_KEYBOARD;
+        input.ki.wVk = keycode;
+        input.ki.dwFlags = down ? 0 : KEYEVENTF_KEYUP;
+        SendInput(1, &input, sizeof(INPUT));
+    }
 };
-std::unique_ptr<InputInjector> createPlatformInputInjector() { return std::make_unique<WinInputInjector>(); }
+
+extern "C" InputInjector* CreateInputInjector() {
+    return new WindowsInputInjector();
 }
-#endif
