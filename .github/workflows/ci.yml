@@ -29,6 +29,7 @@ jobs:
       - name: Install and check backend
         run: |
           cd backend
+          cp package-ci.json package.json
           npm install
           npm run build || true
       - name: Install and check UI
