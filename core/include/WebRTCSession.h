@@ -46,6 +46,8 @@ public:
     void AddVideoSource(rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> source) override;
     void AddAudioSource(rtc::scoped_refptr<webrtc::AudioSourceInterface> source);
 
+    void PushEncodedFrame(const EncodedFrame& frame);
+
 private:
     rtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface> peer_connection_factory_;
     rtc::scoped_refptr<webrtc::PeerConnectionInterface> peer_connection_;
@@ -85,6 +87,8 @@ private:
     void CaptureAndSendLoop();
 
     void OnEncodedFrame(const EncodedFrame& frame);
+
+    rtc::scoped_refptr<FrameVideoSource> video_source_;
 
 };
 #else

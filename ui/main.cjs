@@ -7,5 +7,6 @@ function createWindow() {
   } else {
     win.loadFile("dist/index.html"); // Production build
   }
+  win.webContents.openDevTools(); // Open DevTools for debugging
 }
 app.whenReady().then(createWindow);

@@ -12,6 +12,8 @@ if(USE_WEBRTC)
     include_directories(${WEBRTC_ROOT}/include)
     link_directories(${WEBRTC_ROOT})
     message(STATUS "WebRTC enabled: ${WEBRTC_ROOT}")
+    add_definitions(-DUSE_WEBRTC)
+    include_directories(${CMAKE_SOURCE_DIR}/third_party/webrtc/src)
 endif()
 
 set(SRC_FILES
