@@ -57,3 +57,9 @@ target_link_libraries(stream_core_app stream_core)
 if(USE_WEBRTC AND EXISTS "${WEBRTC_ROOT}")
     target_link_libraries(stream_core_app webrtc)
 endif()
+
+# Add a test target for the core pipeline
+enable_testing()
+add_executable(test_core_pipeline tests/test_core_pipeline.cpp)
+target_link_libraries(test_core_pipeline stream_core)
+add_test(NAME CorePipelineTest COMMAND test_core_pipeline)

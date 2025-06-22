@@ -5,6 +5,7 @@ build/
 *.exe
 *.dll
 *.so
+*.a
 *.dylib
 *.vcxproj*
 CMakeFiles/
@@ -23,3 +24,28 @@ npm-debug.log
 
 # VSCode
 .vscode/
+.devcontainer/
+*.code-workspace
+
+# Python
+__pycache__/
+*.pyc
+
+# WebRTC/Third-party
+webrtc-checkout/
+third_party/
+out/
+
+# OS
+Thumbs.db
+
+# Misc
+*.swp
+*.swo
+*.bak
+*.tmp
+
+# Ignore test binaries
+/tests/*.exe
+/tests/*.out
+/tests/*.app
