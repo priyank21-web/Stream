@@ -1,4 +1,13 @@
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import HomePage from './pages/HomePage';
+import LoginPage from './pages/LoginPage';
+import SignupPage from './pages/SignupPage';
+import NotFoundPage from './pages/NotFoundPage';
+import LoadingPage from './pages/LoadingPage';
+import NavBar from './components/NavBar';
+import ProtectedRoute from './components/ProtectedRoute';
+import DashboardPage from './pages/DashboardPage';
 
 export default function App() {
   const [ws, setWs] = useState<WebSocket | null>(null);
@@ -34,6 +43,10 @@ export default function App() {
   const [auditLog, setAuditLog] = useState<any[]>([]);
 
   const [notifications, setNotifications] = useState<any[]>([]);
+
+  // Auth state for routing
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // On mount, check for ?token= in URL
   useEffect(() => {
@@ -122,9 +135,9 @@ export default function App() {
     }
   };
 
-  // Login handler
-  const handleLogin = async () => {
-    setLoginStatus('loggingin');
+  // Use real backend login/signup handlers
+  const handleLogin = async (username: string, password: string) => {
+    setLoading(true);
     setError(null);
     try {
       const res = await fetch('http://localhost:8080/login', {
@@ -133,19 +146,47 @@ export default function App() {
         body: JSON.stringify({ username, password })
       });
       if (!res.ok) {
-        setLoginStatus('error');
-        setError('Login failed');
-        return;
+        setLoading(false);
+        throw new Error('Login failed');
       }
       const data = await res.json();
       setToken(data.token);
       setRole(data.role);
-      setLoginStatus('loggedin');
-      setLog(l => [...l, 'Login successful']);
-    } catch (err) {
-      setLoginStatus('error');
-      setError('Login error');
+      setIsLoggedIn(true);
+      setLoading(false);
+    } catch (err: any) {
+      setError(err.message || 'Login failed');
+      setIsLoggedIn(false);
+      setLoading(false);
+      throw err;
     }
+  };
+
+  const handleSignup = async (username: string, password: string, role: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('http://localhost:8080/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password, role })
+      });
+      if (!res.ok) {
+        setLoading(false);
+        throw new Error('Signup failed: ' + (await res.text()));
+      }
+      setLoading(false);
+    } catch (err: any) {
+      setError(err.message || 'Signup failed');
+      setLoading(false);
+      throw err;
+    }
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setToken(null);
+    setRole(null);
   };
 
   const connect = () => {
@@ -365,162 +406,22 @@ export default function App() {
     return () => { if (ws) ws.close(); };
   }, [role]);
 
+  if (loading) return <LoadingPage />;
+
   return (
-    <div style={{ padding: 20 }}
-      tabIndex={0}
-      onKeyDown={handleKeyDown}
-      onKeyUp={handleKeyUp}
-    >
-      <h2>Stream UI (WebRTC Demo)</h2>
-      {loginStatus !== 'loggedin' ? (
-        <div style={{ marginBottom: 20 }}>
-          {registerMode ? (
-            <>
-              <h4>Register</h4>
-              <input placeholder="Username" value={username} onChange={e => setUsername(e.target.value)} />
-              <input placeholder="Password" type="password" value={password} onChange={e => setPassword(e.target.value)} />
-              <select value={registerRole} onChange={e => setRegisterRole(e.target.value)}>
-                <option value="user">User</option>
-                <option value="admin">Admin</option>
-              </select>
-              <button onClick={handleRegister}>Register</button>
-              <button onClick={() => setRegisterMode(false)} style={{ marginLeft: 10 }}>Back to Login</button>
-            </>
-          ) : (
-            <>
-              <h4>Login</h4>
-              <input placeholder="Username" value={username} onChange={e => setUsername(e.target.value)} />
-              <input placeholder="Password" type="password" value={password} onChange={e => setPassword(e.target.value)} />
-              <button onClick={handleLogin} disabled={loginStatus === 'loggingin'}>Login</button>
-              <button onClick={() => setRegisterMode(true)} style={{ marginLeft: 10 }}>Register</button>
-            </>
-          )}
-          <div style={{ marginTop: 10 }}>
-            <button onClick={() => window.location.href = 'http://localhost:8080/auth/google'} style={{ background: '#4285F4', color: 'white', padding: '8px 16px', border: 'none', borderRadius: 4, fontWeight: 'bold' }}>
-              Sign in with Google
-            </button>
-          </div>
-          {error && <span style={{ color: 'red', marginLeft: 10 }}>{error}</span>}
-        </div>
-      ) : null}
-      <div style={{ marginBottom: 10 }}>
-        <b>Status:</b> {connectionStatus}
-        {role && <span style={{ marginLeft: 10 }}>[Role: <b>{role}</b>]</span>}
-        {error && <span style={{ color: 'red', marginLeft: 10 }}>{error}</span>}
-      </div>
-      {/* Admin dashboard */}
-      {role === 'admin' && adminData && (
-        <div style={{ marginBottom: 20, color: 'purple', border: '1px solid #ccc', padding: 10 }}>
-          <b>Admin Dashboard</b>
-          <div>
-            <b>Users:</b>
-            {adminData.users.map(u => (
-              <span key={u} style={{ marginRight: 10 }}>
-                {u}
-                {u !== 'admin' && (
-                  <button style={{ marginLeft: 4 }} onClick={() => handleRemoveUser(u)}>Remove</button>
-                )}
-              </span>
-            ))}
-          </div>
-          <div>
-            <b>Rooms:</b>
-            {adminData.rooms.map(r => (
-              <span key={r} style={{ marginRight: 10 }}>
-                {r}
-                <button style={{ marginLeft: 4 }} onClick={() => handleRemoveRoom(r)}>Remove</button>
-              </span>
-            ))}
-          </div>
-          {analytics && (
-            <div style={{ marginTop: 10, color: 'black' }}>
-              <b>Analytics:</b>
-              <div>Logins: {analytics.logins}</div>
-              <div>Registrations: {analytics.registrations}</div>
-              <div>Control Events: {analytics.controlEvents}</div>
-              <div>Active Sessions: {analytics.activeSessions}</div>
-              <div>Last Updated: {new Date(analytics.timestamp).toLocaleTimeString()}</div>
-            </div>
-          )}
-          {/* Audit Log Viewer */}
-          <div style={{ marginTop: 10, color: 'black' }}>
-            <b>Audit Log (last {auditLog.length} events):</b>
-            <div style={{ maxHeight: 200, overflow: 'auto', background: '#f9f9f9', border: '1px solid #ddd', padding: 6, fontSize: 12 }}>
-              {auditLog.length === 0 && <div>No audit events.</div>}
-              {auditLog.map((e, i) => (
-                <div key={i} style={{ borderBottom: '1px solid #eee', padding: '2px 0' }}>
-                  <span style={{ color: '#888' }}>{new Date(e.timestamp).toLocaleTimeString()} </span>
-                  <b>{e.type}</b> {JSON.stringify(e.details)}
-                </div>
-              ))}
-            </div>
-          </div>
-          {/* Real-time Notifications */}
-          <div style={{ marginTop: 10, color: 'black' }}>
-            <b>Notifications (real-time):</b>
-            <div style={{ maxHeight: 200, overflow: 'auto', background: '#f9f9f9', border: '1px solid #ddd', padding: 6, fontSize: 12 }}>
-              {notifications.length === 0 && <div>No notifications yet.</div>}
-              {notifications.map((n, i) => (
-                <div key={i} style={{ borderBottom: '1px solid #eee', padding: '2px 0', color: n.type === 'login_failed' || n.type.startsWith('admin_') ? 'red' : '#333' }}>
-                  <span style={{ color: '#888' }}>{new Date(n.timestamp).toLocaleTimeString()} </span>
-                  <b>{n.type}</b> {JSON.stringify(n.details)}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-      <div style={{ marginBottom: 10 }}>
-        <label>Room:</label>
-        <input value={room} onChange={e => setRoom(e.target.value)} placeholder="Enter room name" />
-        <span style={{ marginLeft: 10 }}>(Current room: <b>{room}</b>)</span>
-      </div>
-      <button onClick={connect} disabled={connectionStatus === 'connected' || connectionStatus === 'connecting' || loginStatus !== 'loggedin'}>Connect to Signaling</button>
-      <button onClick={disconnect} disabled={connectionStatus !== 'connected'} style={{ marginLeft: 10 }}>Disconnect</button>
-      <div>Your Peer ID: <b>{peerId}</b></div>
-      <input placeholder="Remote Peer ID" value={remoteId} onChange={e => setRemoteId(e.target.value)} />
-      <div>
-        <label>Camera Device:</label>
-        <select value={camera} onChange={e => setCamera(e.target.value)}>
-          <option value="default">Default Camera</option>
-          <option value="v4l2loopback">Virtual Camera (Linux)</option>
-        </select>
-      </div>
-      <div>
-        <label>Microphone Device:</label>
-        <select value={microphone} onChange={e => setMicrophone(e.target.value)}>
-          <option value="default">Default Microphone</option>
-          <option value="snd-aloop">Virtual Microphone (Linux)</option>
-        </select>
-      </div>
-      <button onClick={sendOffer} disabled={!ws || !remoteId || connectionStatus !== 'connected'}>Send Offer (Start Streaming)</button>
-      <div style={{ display: 'flex', gap: 20, marginTop: 20 }}>
-        <div>
-          <h4>Local Video</h4>
-          <video ref={localVideoRef} autoPlay playsInline muted width={320} height={240} style={{ background: '#222' }} />
-        </div>
-        <div>
-          <h4>Remote Video</h4>
-          <video
-            ref={remoteVideoRef}
-            autoPlay
-            playsInline
-            width={320}
-            height={240}
-            style={{ background: '#222', outline: '2px solid #0af' }}
-            onMouseDown={handleRemoteMouse}
-            onMouseUp={handleRemoteMouse}
-            onMouseMove={handleRemoteMouse}
-            onClick={handleRemoteMouse}
-          />
-        </div>
-      </div>
-      <pre style={{ background: '#eee', padding: 10, height: 200, overflow: 'auto', marginTop: 20 }}>{log.join('\n')}</pre>
-      {role === 'admin' && (
-        <div style={{ marginBottom: 10, color: 'purple' }}>
-          <b>Admin features enabled.</b>
-        </div>
-      )}
-    </div>
+    <Router>
+      <NavBar isLoggedIn={isLoggedIn} onLogout={handleLogout} />
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
+        <Route path="/signup" element={<SignupPage onSignup={handleSignup} />} />
+        <Route path="/dashboard" element={
+          <ProtectedRoute isLoggedIn={isLoggedIn}>
+            <DashboardPage />
+          </ProtectedRoute>
+        } />
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+    </Router>
   );
 }

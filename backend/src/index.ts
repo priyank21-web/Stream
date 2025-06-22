@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import { createServer } from 'http';
 import { Server } from 'ws';
 import { v4 as uuidv4 } from 'uuid';
@@ -38,7 +38,7 @@ app.post('/register', (req, res) => {
 });
 
 // Updated login route - no tracking
-app.post('/login', function (req, res) {
+app.post('/login', (req, res) => {
   const { username, password } = req.body;
   console.log(`[LOGIN] Attempt: ${username}`);
   const user = users[username];
@@ -53,14 +53,17 @@ app.post('/login', function (req, res) {
 });
 
 // Example admin-only endpoint - minimal data
-app.get('/admin', (req: any, res) => {
+app.get('/admin', (req, res) => {
   const auth = req.headers.authorization;
   if (!auth) return res.status(401).send('No token');
   try {
     const token = auth.split(' ')[1];
-    const payload = jwt.verify(token, SECRET) as any;
-    if (payload.role !== 'admin') return res.status(403).send('Forbidden');
-    res.json({ users: Object.keys(users), rooms: Object.keys(rooms) });
+    const payload = jwt.verify(token, SECRET);
+    if (typeof payload === 'object' && payload !== null && 'role' in payload && payload.role === 'admin') {
+      res.json({ users: Object.keys(users), rooms: Object.keys(rooms) });
+    } else {
+      res.status(403).send('Forbidden');
+    }
   } catch {
     res.status(401).send('Invalid token');
   }
@@ -129,6 +132,7 @@ wss.on('connection', function (ws, req) {
   });
 });
 
-server.listen(process.env.PORT || 8080, function () {
-  console.log('Backend listening on :' + (process.env.PORT || 8080));
+const PORT = process.env.PORT ? Number(process.env.PORT) : 8080;
+server.listen(PORT, '0.0.0.0', function () {
+  console.log('Backend listening on :' + PORT);
 });
