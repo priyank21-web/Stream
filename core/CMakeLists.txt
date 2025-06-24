@@ -10,11 +10,14 @@ option(USE_WEBRTC "Enable Google WebRTC integration" ON)
 if(USE_WEBRTC)
     set(WEBRTC_ROOT "${CMAKE_SOURCE_DIR}/third_party/webrtc/out/Default" CACHE PATH "Path to WebRTC")
     include_directories(${WEBRTC_ROOT}/include)
+    include_directories(${CMAKE_SOURCE_DIR}/third_party/webrtc/src/) # <-- Add this line to use headers from source
     link_directories(${WEBRTC_ROOT})
     message(STATUS "WebRTC enabled: ${WEBRTC_ROOT}")
     add_definitions(-DUSE_WEBRTC)
-    include_directories(${CMAKE_SOURCE_DIR}/third_party/webrtc/src)
+    include_directories(${CMAKE_SOURCE_DIR}/third_party/webrtc/src/)
 endif()
+
+include_directories(${CMAKE_SOURCE_DIR}/third_party/websocketpp) # <-- Add websocketpp include
 
 set(SRC_FILES
     src/main.cpp
